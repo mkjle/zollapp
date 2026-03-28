@@ -14,16 +14,12 @@ import {
 import { MODULES, Question } from "../data/questions";
 import { cn } from "../lib/utils";
 
-import { PdfUpload } from "./PdfUpload";
-
 interface StartScreenProps {
   questions: (Question & { stage: number; currentModuleId: number | null })[];
   onStartMode: (mode: "smart" | "module" | "random", moduleId?: number | null) => void;
   onDownload: () => void;
   onUpload: (file: File) => void;
-  onQuestionsAdded: (questions: Question[]) => void;
   onViewOverview: () => void;
-  onReset: () => void;
   onResetStages: () => void;
 }
 
@@ -32,13 +28,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onStartMode,
   onDownload,
   onUpload,
-  onQuestionsAdded,
   onViewOverview,
-  onReset,
   onResetStages
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
 
   const stats = {
@@ -64,8 +57,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             Meistere deine <span className="text-indigo-600">Prüfung.</span>
           </h1>
           <p className="text-lg text-slate-500 max-w-lg">
-            Lerne effizient mit unserem intelligenten Karteikarten-System. 
-            Lade deine PDFs hoch, um automatisch Fragen zu extrahieren.
+            Lerne effizient mit unserem intelligenten Karteikarten-System. Bereite dich gezielt auf deine mündliche Prüfung vor.
           </p>
           
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
@@ -174,46 +166,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                       </div>
                     </div>
                   )}
-
-                  {!showDeleteConfirm ? (
-                    <button 
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider"
-                    >
-                      Alle Fragen löschen
-                    </button>
-                  ) : (
-                    <div className="flex flex-col gap-2 p-3 bg-red-50 rounded-2xl border border-red-100">
-                      <p className="text-[10px] font-bold text-red-700 text-center uppercase">Wirklich alles löschen?</p>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => {
-                            onReset();
-                            setShowDeleteConfirm(false);
-                          }}
-                          className="flex-1 py-2 bg-red-600 text-white rounded-xl text-[10px] font-bold uppercase"
-                        >
-                          Ja
-                        </button>
-                        <button 
-                          onClick={() => setShowDeleteConfirm(false)}
-                          className="flex-1 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-bold uppercase"
-                        >
-                          Nein
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
-
-      {/* PDF Upload Section */}
-      <div className="max-w-3xl mx-auto">
-        <PdfUpload onQuestionsAdded={onQuestionsAdded} />
       </div>
 
       {/* Learning Modes Grid */}

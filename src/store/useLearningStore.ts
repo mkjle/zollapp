@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { RAW_QUESTIONS, Question } from "../data/questions";
+import defaultProgress from "../data/default/default.json";
 
 export interface Progress {
   stages: Record<string, number>; // questionId -> stage (0-4)
@@ -36,7 +37,7 @@ export function useLearningStore() {
         console.error("Failed to parse progress", e);
       }
     }
-    return { stages: {}, customModules: {}, lastAnswered: [], customQuestions: [] };
+    return (defaultProgress as Progress) || { stages: {}, customModules: {}, lastAnswered: [], customQuestions: [] };
   });
 
   useEffect(() => {
@@ -95,7 +96,7 @@ export function useLearningStore() {
   }, []);
 
   const resetProgress = useCallback(() => {
-    setProgress({ stages: {}, customModules: {}, lastAnswered: [], customQuestions: [] });
+    setProgress((defaultProgress as Progress) || { stages: {}, customModules: {}, lastAnswered: [], customQuestions: [] });
   }, []);
 
   const resetStages = useCallback(() => {

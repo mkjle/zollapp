@@ -82,9 +82,7 @@ export default function App() {
             onStartMode={handleStartMode}
             onDownload={handleDownload}
             onUpload={handleUpload}
-            onQuestionsAdded={addQuestions}
             onViewOverview={() => setView("overview")}
-            onReset={resetProgress}
             onResetStages={resetStages}
           />
         )}
