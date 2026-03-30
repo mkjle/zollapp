@@ -13,6 +13,8 @@ interface LearningViewProps {
   onAssign: (questionId: string, moduleId: number) => void;
   onBack: () => void;
   lastAnswered: string[];
+  initialIndex?: number;
+  onIndexChange?: (index: number) => void;
 }
 
 export const LearningView: React.FC<LearningViewProps> = ({
@@ -22,18 +24,32 @@ export const LearningView: React.FC<LearningViewProps> = ({
   onAnswer,
   onAssign,
   onBack,
-  lastAnswered
+  lastAnswered,
+  initialIndex = 0,
+  onIndexChange
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 });
+
+  // Update currentIndex if initialIndex changes (e.g. when restarting)
+  useEffect(() => {
+    setCurrentIndex(initialIndex);
+  }, [initialIndex]);
 
   // Filter and sort questions based on mode
   const sessionQuestions = useMemo(() => {
     let filtered = [...allQuestions];
 
-    if (mode === "module") {
+    // 1. Filter by module if moduleId is explicitly provided
+    // or if we are in "module" mode (which handles unassigned questions if moduleId is null)
+    if (moduleId !== undefined) {
       filtered = filtered.filter(q => q.currentModuleId === moduleId);
-    } else if (mode === "smart") {
+    } else if (mode === "module") {
+      filtered = filtered.filter(q => q.currentModuleId === null);
+    }
+
+    // 2. Apply sorting/mode logic
+    if (mode === "smart") {
       // Smart Learn: Stage 0 first, then 1, etc.
       // But avoid questions in lastAnswered (deferred for 10)
       const available = filtered.filter(q => !lastAnswered.includes(q.id));
@@ -42,7 +58,6 @@ export const LearningView: React.FC<LearningViewProps> = ({
       // Sort available by stage
       available.sort((a, b) => a.stage - b.stage);
       
-      // If we have very few available, we might have to include deferred at the end
       filtered = [...available, ...deferred];
     } else if (mode === "random") {
       filtered.sort(() => Math.random() - 0.5);
@@ -50,6 +65,20 @@ export const LearningView: React.FC<LearningViewProps> = ({
 
     return filtered;
   }, [allQuestions, mode, moduleId, lastAnswered]);
+
+  // Notify parent of index changes
+  useEffect(() => {
+    if (onIndexChange && mode === "module") {
+      onIndexChange(currentIndex);
+    }
+  }, [currentIndex, onIndexChange, mode]);
+
+  // Safety check: if index is out of bounds (e.g. after deleting questions), reset to 0
+  useEffect(() => {
+    if (currentIndex >= sessionQuestions.length && sessionQuestions.length > 0) {
+      setCurrentIndex(0);
+    }
+  }, [sessionQuestions.length, currentIndex]);
 
   const currentQuestion = sessionQuestions[currentIndex];
 

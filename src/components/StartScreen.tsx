@@ -9,7 +9,10 @@ import {
   LayoutDashboard, 
   GraduationCap,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  X,
+  Play,
+  RefreshCw
 } from "lucide-react";
 import { MODULES, Question } from "../data/questions";
 import { cn } from "../lib/utils";
@@ -21,6 +24,7 @@ interface StartScreenProps {
   onUpload: (file: File) => void;
   onViewOverview: () => void;
   onResetStages: () => void;
+  onResetModulePosition: (moduleId: number | null) => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({
@@ -29,10 +33,12 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onDownload,
   onUpload,
   onViewOverview,
-  onResetStages
+  onResetStages,
+  onResetModulePosition
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+  const [selectedModuleForOptions, setSelectedModuleForOptions] = React.useState<number | null>(null);
 
   const stats = {
     total: questions.length,
@@ -189,7 +195,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
               return (
                 <button
                   key={m.id}
-                  onClick={() => onStartMode("module", m.id)}
+                  onClick={() => setSelectedModuleForOptions(m.id)}
                   className="group bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all text-left relative overflow-hidden"
                 >
                   <div className="relative z-10 space-y-4">
@@ -255,6 +261,95 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           </div>
         </div>
       </div>
+      {/* Module Options Modal */}
+      {selectedModuleForOptions !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-[2.5rem] p-8 shadow-2xl max-w-md w-full border border-slate-100"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-slate-800">
+                {MODULES.find(m => m.id === selectedModuleForOptions)?.name}
+              </h3>
+              <button 
+                onClick={() => setSelectedModuleForOptions(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  onStartMode("module", selectedModuleForOptions);
+                  setSelectedModuleForOptions(null);
+                }}
+                className="w-full p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left flex items-center gap-4 group"
+              >
+                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Play className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Weitermachen</div>
+                  <div className="text-xs text-slate-500">Dort fortfahren, wo du aufgehört hast</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  onStartMode("smart", selectedModuleForOptions);
+                  setSelectedModuleForOptions(null);
+                }}
+                className="w-full p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left flex items-center gap-4 group"
+              >
+                <div className="p-3 bg-amber-100 rounded-xl text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Smart Learn</div>
+                  <div className="text-xs text-slate-500">Intelligente Wiederholung für dieses Modul</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  onStartMode("random", selectedModuleForOptions);
+                  setSelectedModuleForOptions(null);
+                }}
+                className="w-full p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left flex items-center gap-4 group"
+              >
+                <div className="p-3 bg-violet-100 rounded-xl text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                  <Shuffle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Zufällig</div>
+                  <div className="text-xs text-slate-500">Alle Fragen dieses Moduls in zufälliger Reihenfolge</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  onResetModulePosition(selectedModuleForOptions);
+                  onStartMode("module", selectedModuleForOptions);
+                  setSelectedModuleForOptions(null);
+                }}
+                className="w-full p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left flex items-center gap-4 group"
+              >
+                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Von vorne</div>
+                  <div className="text-xs text-slate-500">Beginne wieder bei der ersten Frage</div>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

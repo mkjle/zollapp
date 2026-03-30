@@ -7,6 +7,7 @@ export interface Progress {
   customModules: Record<string, number | null>; // questionId -> moduleId
   lastAnswered: string[]; // List of recently answered question IDs to avoid immediate repetition
   customQuestions: Question[]; // Questions added by the user
+  modulePositions: Record<string, number>; // moduleId (as string) -> last index
 }
 
 export function useLearningStore() {
@@ -31,13 +32,20 @@ export function useLearningStore() {
           stages: parsed.stages || {},
           customModules: parsed.customModules || {},
           lastAnswered: parsed.lastAnswered || [],
-          customQuestions: uniqueQuestions
+          customQuestions: uniqueQuestions,
+          modulePositions: parsed.modulePositions || {}
         };
       } catch (e) {
         console.error("Failed to parse progress", e);
       }
     }
-    return (defaultProgress as Progress) || { stages: {}, customModules: {}, lastAnswered: [], customQuestions: [] };
+    return (defaultProgress as any as Progress) || { 
+      stages: {}, 
+      customModules: {}, 
+      lastAnswered: [], 
+      customQuestions: [],
+      modulePositions: {}
+    };
   });
 
   useEffect(() => {
@@ -96,14 +104,21 @@ export function useLearningStore() {
   }, []);
 
   const resetProgress = useCallback(() => {
-    setProgress((defaultProgress as Progress) || { stages: {}, customModules: {}, lastAnswered: [], customQuestions: [] });
+    setProgress((defaultProgress as any as Progress) || { 
+      stages: {}, 
+      customModules: {}, 
+      lastAnswered: [], 
+      customQuestions: [],
+      modulePositions: {}
+    });
   }, []);
 
   const resetStages = useCallback(() => {
     setProgress((prev) => ({
       ...prev,
       stages: {},
-      lastAnswered: []
+      lastAnswered: [],
+      modulePositions: {}
     }));
   }, []);
 
@@ -143,6 +158,32 @@ export function useLearningStore() {
     });
   }, [allQuestions, progress.customModules, progress.stages]);
 
+  const resetModulePosition = useCallback((moduleId: number | null) => {
+    if (moduleId === null) return;
+    setProgress((prev) => {
+      const newPositions = { ...prev.modulePositions };
+      delete newPositions[moduleId.toString()];
+      return {
+        ...prev,
+        modulePositions: newPositions
+      };
+    });
+  }, []);
+
+  const updateModulePosition = useCallback((moduleId: number | null, index: number) => {
+    if (moduleId === null) return;
+    setProgress((prev) => {
+      if (prev.modulePositions[moduleId.toString()] === index) return prev;
+      return {
+        ...prev,
+        modulePositions: {
+          ...prev.modulePositions,
+          [moduleId.toString()]: index
+        }
+      };
+    });
+  }, []);
+
   return {
     progress,
     questions,
@@ -151,6 +192,8 @@ export function useLearningStore() {
     addQuestions,
     resetProgress,
     resetStages,
+    resetModulePosition,
+    updateModulePosition,
     importProgress,
     getQuestionModule
   };

@@ -16,7 +16,9 @@ export default function App() {
     progress, 
     importProgress,
     resetProgress,
-    resetStages
+    resetStages,
+    resetModulePosition,
+    updateModulePosition
   } = useLearningStore();
   
   const [view, setView] = useState<View>("start");
@@ -53,6 +55,10 @@ export default function App() {
     reader.readAsText(file);
   };
 
+  const handleIndexChange = React.useCallback((index: number) => {
+    updateModulePosition(learningMode.moduleId ?? null, index);
+  }, [updateModulePosition, learningMode.moduleId]);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       {/* Navigation Bar (only for overview) */}
@@ -84,6 +90,7 @@ export default function App() {
             onUpload={handleUpload}
             onViewOverview={() => setView("overview")}
             onResetStages={resetStages}
+            onResetModulePosition={resetModulePosition}
           />
         )}
 
@@ -96,6 +103,8 @@ export default function App() {
             onAssign={assignModule}
             onBack={() => setView("start")}
             lastAnswered={progress.lastAnswered}
+            initialIndex={learningMode.moduleId !== undefined && learningMode.moduleId !== null ? (progress.modulePositions[learningMode.moduleId.toString()] || 0) : 0}
+            onIndexChange={handleIndexChange}
           />
         )}
 
