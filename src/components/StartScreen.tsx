@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   Zap, 
   BookOpen, 
@@ -12,7 +12,8 @@ import {
   AlertCircle,
   X,
   Play,
-  RefreshCw
+  RefreshCw,
+  Search
 } from "lucide-react";
 import { MODULES, Question } from "../data/questions";
 import { cn } from "../lib/utils";
@@ -25,6 +26,7 @@ interface StartScreenProps {
   onViewOverview: () => void;
   onResetStages: () => void;
   onResetModulePosition: (moduleId: number | null) => void;
+  onUpdateModulePosition: (moduleId: number | null, index: number) => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({
@@ -34,11 +36,14 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onUpload,
   onViewOverview,
   onResetStages,
-  onResetModulePosition
+  onResetModulePosition,
+  onUpdateModulePosition
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
   const [selectedModuleForOptions, setSelectedModuleForOptions] = React.useState<number | null>(null);
+  const [showQuestionSearch, setShowQuestionSearch] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   const stats = {
     total: questions.length,
@@ -346,10 +351,119 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                   <div className="text-xs text-slate-500">Beginne wieder bei der ersten Frage</div>
                 </div>
               </button>
+
+              <button
+                onClick={() => setShowQuestionSearch(true)}
+                className="w-full p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left flex items-center gap-4 group"
+              >
+                <div className="p-3 bg-slate-100 rounded-xl text-slate-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Search className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">Ab Frage...</div>
+                  <div className="text-xs text-slate-500">Suche eine Frage und fange dort an</div>
+                </div>
+              </button>
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* Question Search Modal */}
+      <AnimatePresence>
+        {showQuestionSearch && selectedModuleForOptions !== null && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2.5rem] p-8 shadow-2xl max-w-2xl w-full border border-slate-100 flex flex-col max-h-[80vh]"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-800">Frage auswählen</h3>
+                  <p className="text-sm text-slate-500">Modul {selectedModuleForOptions}</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowQuestionSearch(false);
+                    setSearchTerm("");
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Frage suchen..."
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                {(() => {
+                  const moduleQuestions = questions.filter(q => q.currentModuleId === selectedModuleForOptions);
+                  const filtered = moduleQuestions.filter(q => 
+                    q.question.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="py-12 text-center text-slate-400">
+                        Keine Fragen gefunden.
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((q) => {
+                    const index = moduleQuestions.findIndex(mq => mq.id === q.id);
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => {
+                          onUpdateModulePosition(selectedModuleForOptions, index);
+                          onStartMode("module", selectedModuleForOptions);
+                          setShowQuestionSearch(false);
+                          setSelectedModuleForOptions(null);
+                          setSearchTerm("");
+                        }}
+                        className="w-full p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all text-left flex items-start gap-4 group"
+                      >
+                        <div className="min-w-[2.5rem] h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold text-sm group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-bold text-slate-800 text-sm leading-snug mb-1">
+                            {q.question}
+                          </div>
+                          <div className="flex gap-0.5">
+                            {[...Array(4)].map((_, i) => (
+                              <div 
+                                key={i} 
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  i < q.stage ? "bg-indigo-500" : "bg-slate-100"
+                                )} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -91,6 +91,7 @@ export default function App() {
             onViewOverview={() => setView("overview")}
             onResetStages={resetStages}
             onResetModulePosition={resetModulePosition}
+            onUpdateModulePosition={updateModulePosition}
           />
         )}
 
