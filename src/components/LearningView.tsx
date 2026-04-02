@@ -30,14 +30,45 @@ export const LearningView: React.FC<LearningViewProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 });
+  const [shuffledIds, setShuffledIds] = useState<string[]>([]);
 
   // Update currentIndex if initialIndex changes (e.g. when restarting)
   useEffect(() => {
     setCurrentIndex(initialIndex);
   }, [initialIndex]);
 
+  // Helper to shuffle array
+  const shuffleArray = (array: string[]) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
+
+  // Initialize shuffled IDs for random mode
+  useEffect(() => {
+    if (mode === "random") {
+      let filtered = allQuestions;
+      if (moduleId !== undefined) {
+        filtered = filtered.filter(q => q.currentModuleId === moduleId);
+      }
+      const ids = filtered.map(q => q.id);
+      setShuffledIds(shuffleArray(ids));
+      setCurrentIndex(0);
+    }
+  }, [mode, moduleId, allQuestions.length]);
+
   // Filter and sort questions based on mode
   const sessionQuestions = useMemo(() => {
+    if (mode === "random") {
+      // Map shuffledIds back to allQuestions to get current stages/data
+      return shuffledIds
+        .map(id => allQuestions.find(q => q.id === id))
+        .filter((q): q is (Question & { stage: number; currentModuleId: number | null }) => !!q);
+    }
+
     let filtered = [...allQuestions];
 
     // 1. Filter by module if moduleId is explicitly provided
@@ -59,12 +90,10 @@ export const LearningView: React.FC<LearningViewProps> = ({
       available.sort((a, b) => a.stage - b.stage);
       
       filtered = [...available, ...deferred];
-    } else if (mode === "random") {
-      filtered.sort(() => Math.random() - 0.5);
     }
 
     return filtered;
-  }, [allQuestions, mode, moduleId, lastAnswered]);
+  }, [allQuestions, mode, moduleId, lastAnswered, shuffledIds]);
 
   // Notify parent of index changes
   useEffect(() => {
@@ -104,7 +133,17 @@ export const LearningView: React.FC<LearningViewProps> = ({
       setCurrentIndex(prev => prev + 1);
     } else {
       // Session finished or loop back?
-      // For now, let's just loop or show a finish screen
+      if (mode === "random") {
+        // Reshuffle for next cycle so questions don't repeat in same order
+        // Ensure the new first question is different from the current last one if possible
+        const lastId = currentQuestion.id;
+        let newIds = shuffleArray([...shuffledIds]);
+        if (newIds.length > 1 && newIds[0] === lastId) {
+          // Swap first and last to avoid immediate repeat
+          [newIds[0], newIds[newIds.length - 1]] = [newIds[newIds.length - 1], newIds[0]];
+        }
+        setShuffledIds(newIds);
+      }
       setCurrentIndex(0);
     }
   };
