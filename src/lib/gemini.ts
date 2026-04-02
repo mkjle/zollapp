@@ -1,14 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * WICHTIG: Hier kannst du deinen API-Key direkt eintragen, 
- * falls die Umgebungsvariablen nicht funktionieren.
- * Beispiel: const MANUAL_API_KEY = "AIzaSy...";
+ * WICHTIG: Der API-Key wird jetzt über die Benutzeroberfläche eingegeben
+ * und im Lernfortschritt gespeichert.
  */
-const MANUAL_API_KEY = "AIzaSyBxrMEXfMJTIEcW8JFsIWFGudh5hS8U0qk"; 
+let dynamicApiKey = "";
+
+export const setDynamicApiKey = (key: string) => {
+  dynamicApiKey = key;
+};
 
 export const getApiKey = () => {
-  return MANUAL_API_KEY || 
+  return dynamicApiKey || 
          process.env.GEMINI_API_KEY || 
          (import.meta as any).env?.VITE_GEMINI_API_KEY || 
          "";

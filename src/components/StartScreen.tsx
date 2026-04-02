@@ -13,7 +13,8 @@ import {
   X,
   Play,
   RefreshCw,
-  Search
+  Search,
+  Key
 } from "lucide-react";
 import { MODULES, Question } from "../data/questions";
 import { cn } from "../lib/utils";
@@ -27,6 +28,8 @@ interface StartScreenProps {
   onResetStages: () => void;
   onResetModulePosition: (moduleId: number | null) => void;
   onUpdateModulePosition: (moduleId: number | null, index: number) => void;
+  geminiApiKey: string;
+  onUpdateGeminiApiKey: (key: string) => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({
@@ -37,7 +40,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onViewOverview,
   onResetStages,
   onResetModulePosition,
-  onUpdateModulePosition
+  onUpdateModulePosition,
+  geminiApiKey,
+  onUpdateGeminiApiKey
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
@@ -179,6 +184,24 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                   )}
                 </div>
               )}
+
+              {/* Gemini API Key Input */}
+              <div className="pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key className="w-3 h-3 text-slate-400" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gemini API Key</span>
+                </div>
+                <input 
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => onUpdateGeminiApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+                <p className="mt-1 text-[9px] text-slate-400 leading-tight">
+                  Wird lokal im Browser und in der Download-Datei gespeichert.
+                </p>
+              </div>
             </div>
           </div>
         </div>

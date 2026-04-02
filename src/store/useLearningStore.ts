@@ -8,6 +8,7 @@ export interface Progress {
   lastAnswered: string[]; // List of recently answered question IDs to avoid immediate repetition
   customQuestions: Question[]; // Questions added by the user
   modulePositions: Record<string, number>; // moduleId (as string) -> last index
+  geminiApiKey?: string; // Gemini API Key for AI features
 }
 
 export function useLearningStore() {
@@ -33,7 +34,8 @@ export function useLearningStore() {
           customModules: parsed.customModules || {},
           lastAnswered: parsed.lastAnswered || [],
           customQuestions: uniqueQuestions,
-          modulePositions: parsed.modulePositions || {}
+          modulePositions: parsed.modulePositions || {},
+          geminiApiKey: parsed.geminiApiKey || ""
         };
       } catch (e) {
         console.error("Failed to parse progress", e);
@@ -44,7 +46,8 @@ export function useLearningStore() {
       customModules: {}, 
       lastAnswered: [], 
       customQuestions: [],
-      modulePositions: {}
+      modulePositions: {},
+      geminiApiKey: ""
     };
   });
 
@@ -184,6 +187,13 @@ export function useLearningStore() {
     });
   }, []);
 
+  const updateGeminiApiKey = useCallback((key: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      geminiApiKey: key
+    }));
+  }, []);
+
   return {
     progress,
     questions,
@@ -194,6 +204,7 @@ export function useLearningStore() {
     resetStages,
     resetModulePosition,
     updateModulePosition,
+    updateGeminiApiKey,
     importProgress,
     getQuestionModule
   };

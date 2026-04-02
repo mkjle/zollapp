@@ -4,6 +4,7 @@ import { StartScreen } from "./components/StartScreen";
 import { LearningView } from "./components/LearningView";
 import { QuestionOverview } from "./components/QuestionOverview";
 import { ArrowLeft, GraduationCap } from "lucide-react";
+import { setDynamicApiKey } from "./lib/gemini";
 
 type View = "start" | "learning" | "overview";
 
@@ -18,9 +19,17 @@ export default function App() {
     resetProgress,
     resetStages,
     resetModulePosition,
-    updateModulePosition
+    updateModulePosition,
+    updateGeminiApiKey
   } = useLearningStore();
   
+  // Sync API Key to Gemini Lib
+  React.useEffect(() => {
+    if (progress.geminiApiKey) {
+      setDynamicApiKey(progress.geminiApiKey);
+    }
+  }, [progress.geminiApiKey]);
+
   const [view, setView] = useState<View>("start");
   const [learningMode, setLearningMode] = useState<{
     mode: "smart" | "module" | "random";
@@ -92,6 +101,8 @@ export default function App() {
             onResetStages={resetStages}
             onResetModulePosition={resetModulePosition}
             onUpdateModulePosition={updateModulePosition}
+            geminiApiKey={progress.geminiApiKey || ""}
+            onUpdateGeminiApiKey={updateGeminiApiKey}
           />
         )}
 
