@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Send, Mic, MicOff, Loader2, Bot, User, Sparkles } from "lucide-react";
+import { X, Send, Mic, Loader2, Bot, User, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Question } from "../data/questions";
+import { explainQuestion, transcribeAudio, getGemini } from "../lib/gemini";
 
 interface Message {
   role: "user" | "assistant";
@@ -33,45 +33,26 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
     }
   }, [isOpen]);
 
-  // Scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
+  // Scroll to bottom - Disabled per user request to read from top
+  // useEffect(() => {
+  //   if (scrollRef.current) {
+  //     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  //   }
+  // }, [messages, isTyping]);
 
   const handleInitialExplanation = async () => {
     setIsTyping(true);
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const prompt = `
-        Du bist ein hochqualifizierter KI-Tutor für eine Fachprüfung (z.B. Sachkundeprüfung nach § 34a GewO oder ähnliches).
-        Deine Aufgabe ist es, die folgende Frage und die dazugehörige richtige Lösung fachlich fundiert und verständlich zu erklären.
-        
-        FRAGE: "${question.question}"
-        RICHTIGE LÖSUNG: "${Array.isArray(question.answer) ? question.answer.join(", ") : question.answer}"
-        QUELLEN/KONTEXT: ${question.sources.map(s => `Dokument ${s.doc}, Seite ${s.page}`).join("; ")}
-        
-        BITTE GEHE WIE FOLGT VOR:
-        1. Erkläre kurz und prägnant, warum die Lösung korrekt ist.
-        2. Nimm, falls sinnvoll und möglich, Bezug auf konkrete Gesetze, Paragraphen oder Vorschriften (z.B. GewO, BGB, StGB, BewachV).
-        3. Gib einen praktischen Tipp oder eine Merkhilfe, um sich dieses Wissen für die Prüfung besser einzuprägen.
-        
-        Antworte auf Deutsch in einem freundlichen, motivierenden und professionellen Ton. Benutze Markdown für eine klare Strukturierung (Fettgedrucktes, Listen, etc.).
-      `;
+      const explanation = await explainQuestion(
+        question.question,
+        question.answer,
+        question.sources.map(s => `Dokument ${s.doc}, Seite ${s.page}`).join("; ")
+      );
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-      });
-
-      setMessages([{ role: "assistant", content: response.text || "Entschuldigung, ich konnte keine Erklärung generieren." }]);
+      setMessages([{ role: "assistant", content: explanation || "Entschuldigung, ich konnte keine Erklärung generieren." }]);
     } catch (error) {
       console.error("Error generating explanation:", error);
-      setMessages([{ role: "assistant", content: "Fehler: Die KI konnte nicht erreicht werden. Bitte prüfe deine Internetverbindung." }]);
+      setMessages([{ role: "assistant", content: error instanceof Error ? error.message : "Fehler bei der Kommunikation mit der KI." }]);
     } finally {
       setIsTyping(false);
     }
@@ -86,22 +67,8 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
     setIsTyping(true);
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = getGemini();
       
-      const chat = ai.chats.create({
-        model: "gemini-3-flash-preview",
-        config: {
-          systemInstruction: `Du bist ein hilfreicher KI-Tutor. Du hilfst bei der Vorbereitung auf eine Fachprüfung. 
-          Beziehe dich immer auf die aktuelle Frage: "${question.question}" und die richtige Lösung: "${Array.isArray(question.answer) ? question.answer.join(", ") : question.answer}".
-          Antworte präzise, freundlich und auf Deutsch.`,
-        },
-      });
-
-      // Reconstruct history for chat
-      // Note: sendMessage only takes a string, so we might need a different approach if we want full history
-      // But for simplicity, we'll just send the current message with context
       const history = messages.map(m => ({
         role: m.role === "user" ? "user" : "model",
         parts: [{ text: m.content }]
@@ -109,6 +76,12 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
+        config: {
+          systemInstruction: `Du bist ein hilfreicher KI-Experte. Du hilfst bei der Vorbereitung auf eine Fachprüfung. 
+          Beziehe dich immer auf die aktuelle Frage: "${question.question}" und die richtige Lösung: "${Array.isArray(question.answer) ? question.answer.join(", ") : question.answer}".
+          Antworte präzise und auf Deutsch. 
+          WICHTIG: KEINE Begrüßungen, KEINE Einleitungen, KEINE Verabschiedungen. Antworte direkt auf die Frage des Nutzers.`,
+        },
         contents: [
           ...history.map(h => ({ role: h.role, parts: h.parts })),
           { role: "user", parts: [{ text: text }] }
@@ -118,7 +91,7 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
       setMessages(prev => [...prev, { role: "assistant", content: response.text || "Keine Antwort erhalten." }]);
     } catch (error) {
       console.error("Error in chat:", error);
-      setMessages(prev => [...prev, { role: "assistant", content: "Fehler bei der Kommunikation mit der KI." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: error instanceof Error ? error.message : "Fehler bei der Kommunikation mit der KI." }]);
     } finally {
       setIsTyping(false);
     }
@@ -153,6 +126,7 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      setIsTranscribing(true); // Sofort Ladezustand anzeigen
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
@@ -161,37 +135,18 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
   const handleAudioTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(",")[1];
+      const base64Audio = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
         
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error("API Key missing");
-        const ai = new GoogleGenAI({ apiKey });
+      const transcribedText = await transcribeAudio(base64Audio, "audio/webm");
 
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: [
-            {
-              inlineData: {
-                data: base64Audio,
-                mimeType: "audio/webm",
-              },
-            },
-            {
-              text: "Transkribiere dieses Audio exakt auf Deutsch. Gib nur den Text zurück.",
-            },
-          ],
-        });
-
-        const transcribedText = response.text?.trim();
-        if (transcribedText) {
-          setInput(transcribedText);
-          // Optionally send immediately
-          // handleSend(transcribedText);
-        }
-      };
+      if (transcribedText) {
+        setInput(transcribedText);
+      }
     } catch (error) {
       console.error("Transcription error:", error);
     } finally {
@@ -224,7 +179,7 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
                   <Bot className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">KI-Tutor</h3>
+                  <h3 className="font-bold text-slate-800">KI-Experte</h3>
                   <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Prüfungsvorbereitung</p>
                 </div>
               </div>
@@ -301,20 +256,21 @@ export const GeminiChat: React.FC<GeminiChatProps> = ({ question, isOpen, onClos
                     />
                     <div className="absolute right-2 bottom-2 flex items-center gap-1">
                       {isTranscribing ? (
-                        <div className="p-2">
-                          <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                        <div className="p-2 flex items-center gap-2 bg-indigo-50 rounded-xl px-3 py-1.5 border border-indigo-100">
+                          <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                          <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tight">Transkribiere...</span>
                         </div>
                       ) : (
                         <button
                           onClick={isRecording ? stopRecording : startRecording}
                           className={`p-2 rounded-xl transition-all ${
                             isRecording 
-                              ? "bg-rose-100 text-rose-600 animate-pulse" 
+                              ? "bg-rose-500 text-white shadow-lg shadow-rose-200" 
                               : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
                           }`}
                           title={isRecording ? "Aufnahme stoppen" : "Spracheingabe"}
                         >
-                          {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                          <Mic className={`w-5 h-5 ${isRecording ? "animate-pulse" : ""}`} />
                         </button>
                       )}
                     </div>
