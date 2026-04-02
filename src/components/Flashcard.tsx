@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Check, X, RotateCcw, HelpCircle, BookOpen, Tag } from "lucide-react";
+import { Check, X, RotateCcw, HelpCircle, BookOpen, Tag, Sparkles } from "lucide-react";
 import { Question, MODULES } from "../data/questions";
 import { cn } from "../lib/utils";
+import { GeminiChat } from "./GeminiChat";
 
 interface FlashcardProps {
   question: Question & { stage: number; currentModuleId: number | null };
@@ -13,9 +14,10 @@ interface FlashcardProps {
 export const Flashcard: React.FC<FlashcardProps> = ({ question, onAnswer, onAssign }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const handleFlip = () => {
-    if (!showAssign) setIsFlipped(!isFlipped);
+    if (!showAssign && !isChatOpen) setIsFlipped(!isFlipped);
   };
 
   const moduleName = question.currentModuleId 
@@ -102,6 +104,16 @@ export const Flashcard: React.FC<FlashcardProps> = ({ question, onAnswer, onAssi
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  setIsChatOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-100 text-indigo-700 rounded-xl border border-indigo-200 hover:bg-indigo-200 transition-colors text-sm font-bold z-10"
+              >
+                <Sparkles className="w-4 h-4" />
+                KI Fragen
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
                   setShowAssign(true);
                 }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium z-10"
@@ -185,6 +197,12 @@ export const Flashcard: React.FC<FlashcardProps> = ({ question, onAnswer, onAssi
           </motion.div>
         )}
       </AnimatePresence>
+
+      <GeminiChat 
+        question={question}
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+      />
     </div>
   );
 };

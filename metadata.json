@@ -1,5 +1,5 @@
 {
   "name": "Zoll mündliche Prüfung",
   "description": "Eine intelligente Karteikarten-App zur Vorbereitung auf das Feststellungsverfahren (§ 38 BLV) basierend auf offiziellen Fragensammlungen.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["microphone"]
 }
