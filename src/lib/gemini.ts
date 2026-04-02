@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
  * falls die Umgebungsvariablen nicht funktionieren.
  * Beispiel: const MANUAL_API_KEY = "AIzaSy...";
  */
-const MANUAL_API_KEY = ""; 
+const MANUAL_API_KEY = "AIzaSyBxrMEXfMJTIEcW8JFsIWFGudh5hS8U0qk"; 
 
 export const getApiKey = () => {
   return MANUAL_API_KEY || 
